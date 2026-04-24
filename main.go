@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
 	"os/signal"
 	"strings"
@@ -19,285 +18,136 @@ import (
 	"github.com/muesli/termenv"
 )
 
-// --- 1. DATA & CONTENT ---
-
-type Item struct {
-	Title       string
-	Category    string
-	Description string
-	TechStack   string
-	Tag         string
-	Icon        string
-	Link        string
-}
-
-var items = []Item{
-	// PROJECTS
-	{
-		Title:     "zenRoute",
-		Category:  "projects",
-		Tag:       "IoT",
-		Icon:      "◈",
-		Link:      "",
-		TechStack: "FastAPI · Supabase · Docker · React",
-		Description: "Leading a 6-member team to build Sri Lanka's first smart transport safety platform. " +
-			"Features real-time IoT hardware integration, ML-based ETA predictions, and a scalable backend architecture.",
-	},
-	{
-		Title:     "PathHelm",
-		Category:  "projects",
-		Tag:       "API",
-		Icon:      "⬡",
-		Link:      "https://github.com/KingSajxxd/pathhelm",
-		TechStack: "Python · Redis · Docker · AI",
-		Description: "A developer-first, containerized API gateway built for speed. " +
-			"Handles rate limiting, API key validation, and logs traffic. Includes AI-powered traffic analytics.",
-	},
-	{
-		Title:     "Chat Server",
-		Category:  "projects",
-		Tag:       "Backend",
-		Icon:      "◉",
-		Link:      "https://github.com/KingSajxxd/python-chat-server",
-		TechStack: "Python · WebSockets · Docker",
-		Description: "Real-Time WebSocket Backend. A containerized, event-driven chat server built for async communication. " +
-			"Uses a custom WebSocket ConnectionManager and circular buffer to broadcast messages.",
-	},
-
-	// ABOUT
-	{
-		Title:     "About",
-		Category:  "about",
-		Tag:       "Profile",
-		Icon:      "●",
-		TechStack: "Backend · DevOps · Cloud",
-		Description: "Software Engineering Undergraduate at IIT/Westminster. " +
-			"Focused on Backend Development and Cloud Solutions. " +
-			"I don't just write code; I ship systems.",
-	},
-}
-
-// Social links with actual URLs
-type Social struct {
-	Icon string
-	Name string
-	URL  string
-	Link string
-}
-
-var socials = []Social{
-	{Icon: "◐ ", Name: "GitHub", URL: "github.com/KingSajxxd", Link: "https://github.com/KingSajxxd"},
-	{Icon: "◧ ", Name: "LinkedIn", URL: "linkedin.com/in/sajjad-aiyoob", Link: "https://linkedin.com/in/sajjad-aiyoob"},
-	{Icon: "✉ ", Name: "Email", URL: "sajaiyoobofficial@gmail.com", Link: "mailto:sajaiyoobofficial@gmail.com"},
-}
-
-// Easter egg quotes
-var quotes = []string{
-	"\"First, solve the problem. Then, write the code.\"",
-	"\"Code is like humor. When you have to explain it, it's bad.\"",
-	"\"Any fool can write code that a computer can understand.\"",
-	"\"Talk is cheap. Show me the code.\" - Linus Torvalds",
-	"\"It works on my machine.\" - Every developer ever",
-	"\"There are only 10 types of people in the world...\"",
-	"\"rm -rf / # Trust me, it works\" - Nobody ever",
-	"\"sudo make me a sandwich\" - xkcd",
-}
-
-// Easter egg secrets
-var easterEggHints = []string{
-	"Try typing 'hello'...",
-	"Press 's' for a surprise...",
-	"The konami code works here...",
-	"Press 'c' for confetti...",
-}
-
-// --- 2. STYLES ---
+// --- PALETTE ---
 
 var (
-	// Colors - Minimal palette
-	accent  = lipgloss.Color("#FF6B35")
-	accent2 = lipgloss.Color("#FF8C42")
-	subtle  = lipgloss.Color("#4A4A4A")
-	muted   = lipgloss.Color("#666666")
-	dimmed  = lipgloss.Color("#3A3A3A")
-	fg      = lipgloss.Color("#FAFAFA")
-	fgDim   = lipgloss.Color("#888888")
-	green   = lipgloss.Color("#00FF88")
-	cyan    = lipgloss.Color("#00D4FF")
-
-	// Logo style
-	logoStyle = lipgloss.NewStyle().
-			Foreground(accent).
-			Bold(true)
-
-	// Navigation
-	navActive = lipgloss.NewStyle().
-			Foreground(fg).
-			Background(dimmed).
-			Padding(0, 2).
-			Bold(true)
-
-	navInactive = lipgloss.NewStyle().
-			Foreground(muted).
-			Padding(0, 2)
-
-	// Section header
-	sectionStyle = lipgloss.NewStyle().
-			Foreground(muted).
-			Bold(true).
-			MarginTop(1).
-			MarginBottom(0)
-
-	// Item styles
-	itemNormal = lipgloss.NewStyle().
-			Foreground(fgDim).
-			PaddingLeft(2)
-
-	itemSelected = lipgloss.NewStyle().
-			Foreground(accent).
-			Bold(true).
-			PaddingLeft(1)
-
-	tagStyle = lipgloss.NewStyle().
-			Foreground(muted).
-			Background(dimmed).
-			Padding(0, 1)
-
-	// Detail view
-	detailBox = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(dimmed).
-			Padding(1, 2).
-			Width(56)
-
-	titleStyle = lipgloss.NewStyle().
-			Foreground(accent).
-			Bold(true)
-
-	techStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7B68EE")).
-			Italic(true)
-
-	descStyle = lipgloss.NewStyle().
-			Foreground(fg).
-			Width(50)
-
-	socialIcon = lipgloss.NewStyle().
-			Foreground(accent)
-
-	socialText = lipgloss.NewStyle().
-			Foreground(fgDim)
-
-	hintStyle = lipgloss.NewStyle().
-			Foreground(muted).
-			Italic(true)
-
-	// Splash styles
-	splashStyle = lipgloss.NewStyle().
-			Foreground(green).
-			Bold(true)
-
-	cursorStyle = lipgloss.NewStyle().
-			Foreground(accent).
-			Bold(true)
-
-	// Quote style
-	quoteStyle = lipgloss.NewStyle().
-			Foreground(cyan).
-			Italic(true)
+	colAccent = lipgloss.Color("#00D1FF") // neon cyan — hero color
+	colFG     = lipgloss.Color("#E8EDF3") // cool off-white
+	colFGDim  = lipgloss.Color("#8B9BB4") // steel gray
+	colMuted  = lipgloss.Color("#4A5568") // dark steel
+	colRule   = lipgloss.Color("#2D3748") // dividers
+	colTech   = lipgloss.Color("#B794F4") // violet — tech stack
+	colLink   = lipgloss.Color("#68D391") // mint — links / CTAs
+	colTagBg  = lipgloss.Color("#1E293B") // tag pill background
 )
 
-// --- 3. MODEL ---
+// --- STYLES ---
+
+var (
+	logoStyle    = lipgloss.NewStyle().Foreground(colAccent).Bold(true)
+	taglineStyle = lipgloss.NewStyle().Foreground(colMuted).Italic(true)
+	sectionStyle = lipgloss.NewStyle().Foreground(colFGDim).Bold(true)
+	ruleStyle    = lipgloss.NewStyle().Foreground(colRule)
+
+	itemTitleNormal   = lipgloss.NewStyle().Foreground(colFGDim)
+	itemTitleSelected = lipgloss.NewStyle().Foreground(colAccent).Bold(true)
+	itemTechNormal    = lipgloss.NewStyle() // not shown for unselected
+	itemTechSelected  = lipgloss.NewStyle().Foreground(colMuted)
+
+	tagStyle = lipgloss.NewStyle().
+			Foreground(colFGDim).
+			Background(colTagBg).
+			Padding(0, 1)
+
+	detailTitleStyle = lipgloss.NewStyle().Foreground(colAccent).Bold(true)
+	detailTechStyle  = lipgloss.NewStyle().Foreground(colTech).Italic(true)
+	detailMetaStyle  = lipgloss.NewStyle().Foreground(colMuted)
+
+	hintStyle   = lipgloss.NewStyle().Foreground(colMuted).Italic(true)
+	linkStyle   = lipgloss.NewStyle().Foreground(colLink)
+	splashStyle = lipgloss.NewStyle().Foreground(colAccent).Bold(true)
+	cursorStyle = lipgloss.NewStyle().Foreground(colFGDim).Bold(true)
+
+	socialIconStyle = lipgloss.NewStyle().Foreground(colAccent)
+	socialTextStyle = lipgloss.NewStyle().Foreground(colFGDim)
+)
+
+// --- MODEL ---
 
 const (
 	ViewSplash = iota
 	ViewList
 	ViewDetail
-	ViewMatrix // Easter egg
-	ViewHelp   // New help view
+	ViewHelp
 )
 
-// Messages for animations
 type tickMsg time.Time
 type blinkMsg struct{}
 
 func tickCmd() tea.Cmd {
-	return tea.Tick(50*time.Millisecond, func(t time.Time) tea.Msg {
-		return tickMsg(t)
-	})
+	return tea.Tick(50*time.Millisecond, func(t time.Time) tea.Msg { return tickMsg(t) })
 }
 
 func blinkCmd() tea.Cmd {
-	return tea.Tick(400*time.Millisecond, func(t time.Time) tea.Msg {
-		return blinkMsg{}
-	})
+	return tea.Tick(400*time.Millisecond, func(t time.Time) tea.Msg { return blinkMsg{} })
 }
 
 type model struct {
-	cursor int
-	view   int
-	width  int
-	height int
-	// Splash animation
+	cursor      int
+	view        int
+	width       int
+	height      int
 	splashText  string
 	splashIndex int
 	blinkCount  int
 	showCursor  bool
 	splashDone  bool
-	// Easter eggs
-	konamiIndex    int
-	matrixRain     [][]rune
-	matrixTick     int
-	showQuote      bool
-	currentQuote   string
-	typedBuffer    string
-	showConfetti   bool
-	confettiTick   int
-	showSnake      bool
-	snakeX         int
-	snakeY         int
-	snakeDir       int
-	showHint       bool
-	hintIndex      int
-	easterEggTimer int
 }
 
-var splashFullText = "Initializing portfolio...\n> Loading projects\n> Connecting systems\n> Welcome, visitor."
-var konamiCode = []string{"up", "up", "down", "down", "left", "right", "left", "right", "b", "a"}
+var splashFullText = "> establishing connection\n> loading systems\n> ready."
 
 func initialModel() model {
-	return model{
-		cursor:      0,
-		view:        ViewSplash,
-		splashText:  "",
-		splashIndex: 0,
-		blinkCount:  0,
-		showCursor:  true,
-		konamiIndex: 0,
-		typedBuffer: "",
-		snakeX:      10,
-		snakeY:      5,
+	return model{showCursor: true}
+}
+
+func (m model) Init() tea.Cmd { return tickCmd() }
+
+// --- RESPONSIVE ---
+
+// tier returns 0=xs(<50) 1=sm(50-79) 2=md(80-119) 3=lg(120+)
+func (m model) tier() int {
+	switch {
+	case m.width < 50:
+		return 0
+	case m.width < 80:
+		return 1
+	case m.width < 120:
+		return 2
+	default:
+		return 3
 	}
 }
 
-func (m model) Init() tea.Cmd {
-	return tickCmd()
+func (m model) contentWidth() int {
+	w := m.width
+	if w == 0 {
+		w = 80
+	}
+	var cw int
+	switch m.tier() {
+	case 0:
+		cw = w - 4
+	case 1:
+		cw = w - 8
+	default:
+		cw = w - 12
+		if cw > 82 {
+			cw = 82
+		}
+	}
+	if cw < 24 {
+		cw = 24
+	}
+	return cw
 }
 
-// --- 4. UPDATE ---
+// --- UPDATE ---
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		// Initialize matrix rain
-		if m.matrixRain == nil {
-			m.matrixRain = make([][]rune, msg.Width)
-			for i := range m.matrixRain {
-				m.matrixRain[i] = make([]rune, msg.Height)
-			}
-		}
 
 	case tickMsg:
 		if m.view == ViewSplash && !m.splashDone {
@@ -305,43 +155,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.splashText += string(splashFullText[m.splashIndex])
 				m.splashIndex++
 				return m, tickCmd()
-			} else {
-				m.splashDone = true
-				return m, blinkCmd()
 			}
-		}
-		if m.view == ViewMatrix {
-			m.matrixTick++
-			// Update matrix rain
-			for i := range m.matrixRain {
-				if rand.Intn(10) < 3 {
-					for j := len(m.matrixRain[i]) - 1; j > 0; j-- {
-						m.matrixRain[i][j] = m.matrixRain[i][j-1]
-					}
-					chars := "アイウエオカキクケコサシスセソタチツテト0123456789ABCDEF"
-					m.matrixRain[i][0] = rune(chars[rand.Intn(len(chars))])
-				}
-			}
-			return m, tickCmd()
-		}
-
-		// Auto-hide easter eggs after 10 seconds
-		if m.view == ViewList && (m.showQuote || m.showConfetti) {
-			m.easterEggTimer++
-			if m.easterEggTimer > 200 { // 10 seconds (200 * 50ms)
-				m.showQuote = false
-				m.showConfetti = false
-				m.easterEggTimer = 0
-				return m, nil
-			}
-			return m, tickCmd()
+			m.splashDone = true
+			return m, blinkCmd()
 		}
 
 	case blinkMsg:
 		if m.view == ViewSplash && m.splashDone {
 			m.showCursor = !m.showCursor
 			m.blinkCount++
-			if m.blinkCount >= 6 { // 3 full blinks
+			if m.blinkCount >= 6 {
 				m.view = ViewList
 				return m, nil
 			}
@@ -351,53 +174,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		key := msg.String()
 
-		// Skip splash on any key
 		if m.view == ViewSplash {
 			m.view = ViewList
 			return m, nil
-		}
-
-		// Exit matrix mode
-		if m.view == ViewMatrix {
-			if key == "esc" || key == "q" {
-				m.view = ViewList
-			}
-			return m, tickCmd()
-		}
-
-		// Konami code detection
-		if key == konamiCode[m.konamiIndex] {
-			m.konamiIndex++
-			if m.konamiIndex == len(konamiCode) {
-				m.konamiIndex = 0
-				m.view = ViewMatrix
-				return m, tickCmd()
-			}
-		} else {
-			m.konamiIndex = 0
-		}
-
-		// Track typed characters for easter eggs
-		if len(key) == 1 {
-			m.typedBuffer += key
-			if len(m.typedBuffer) > 10 {
-				m.typedBuffer = m.typedBuffer[1:]
-			}
-			// Check for secret words
-			if strings.HasSuffix(m.typedBuffer, "hello") {
-				m.showQuote = true
-				m.currentQuote = "👋 Hello there, curious one! You found a secret!"
-				m.typedBuffer = ""
-				m.easterEggTimer = 0
-				return m, tickCmd()
-			}
-			if strings.HasSuffix(m.typedBuffer, "hire") {
-				m.showQuote = true
-				m.currentQuote = "💼 I'm available! Email: sajaiyoobofficial@gmail.com"
-				m.typedBuffer = ""
-				m.easterEggTimer = 0
-				return m, tickCmd()
-			}
 		}
 
 		switch key {
@@ -419,460 +198,340 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 
+		case "tab":
+			if m.view == ViewList {
+				m.cursor = (m.cursor + 1) % len(items)
+			}
+
 		case "enter", " ":
 			if m.view == ViewList {
 				m.view = ViewDetail
 			}
 
 		case "esc", "backspace":
-			if m.view == ViewDetail || m.view == ViewHelp {
+			if m.view != ViewList {
 				m.view = ViewList
 			}
-			m.showQuote = false
-			m.showConfetti = false
-			m.showHint = false
 
 		case "?":
-			// Toggle help view
 			if m.view == ViewHelp {
 				m.view = ViewList
-			} else {
+			} else if m.view == ViewList {
 				m.view = ViewHelp
 			}
-
-		case "s":
-			// Surprise easter egg
-			m.showQuote = true
-			m.currentQuote = "🐍 Ssssurprise! You found me!"
-			m.showConfetti = true
-			m.confettiTick = 0
-			m.easterEggTimer = 0
-			return m, tickCmd()
-
-		case "c":
-			// Confetti easter egg
-			m.showConfetti = !m.showConfetti
-			if m.showConfetti {
-				m.confettiTick = 0
-				m.easterEggTimer = 0
-				return m, tickCmd()
-			}
-
-		case "m":
-			// Matrix mode shortcut (easier than konami)
-			m.view = ViewMatrix
-			return m, tickCmd()
-
-		case "tab":
-			// Cycle through items faster
-			m.cursor = (m.cursor + 1) % len(items)
 		}
 	}
 	return m, nil
 }
 
-// --- 5. VIEW ---
+// --- VIEW HELPERS ---
 
-// OSC 8 hyperlink helper
+func centerText(s string, width int) string {
+	lines := strings.Split(s, "\n")
+	var out []string
+	for _, line := range lines {
+		lw := lipgloss.Width(line)
+		if lw >= width {
+			out = append(out, line)
+			continue
+		}
+		pad := (width - lw) / 2
+		out = append(out, strings.Repeat(" ", pad)+line)
+	}
+	return strings.Join(out, "\n")
+}
+
 func hyperlink(url, text string) string {
 	return fmt.Sprintf("\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\", url, text)
 }
 
-func centerText(s string, width int) string {
-	lines := strings.Split(s, "\n")
-	var centered []string
-	for _, line := range lines {
-		lineWidth := lipgloss.Width(line)
-		if lineWidth >= width {
-			centered = append(centered, line)
-			continue
-		}
-		padding := (width - lineWidth) / 2
-		centered = append(centered, strings.Repeat(" ", padding)+line)
+func sectionHeader(title string, cw int) string {
+	titleStr := sectionStyle.Render(title)
+	ruleW := cw - lipgloss.Width(titleStr) - 1
+	if ruleW < 2 {
+		ruleW = 2
 	}
-	return strings.Join(centered, "\n")
+	return titleStr + ruleStyle.Render(" "+strings.Repeat("─", ruleW))
 }
 
-func (m model) renderSplash() string {
-	width := m.width
-	height := m.height
-	if width == 0 {
-		width = 80
-	}
-	if height == 0 {
-		height = 24
-	}
-
-	var b strings.Builder
-
-	// Terminal-style splash
-	b.WriteString("\n\n")
-
-	// FIX: Remove indentation so the box aligns perfectly
-	asciiTerminal := `┌───────────────────────────────┐
-│  ▓▓▓  SAJJAD'S TERMINAL  ▓▓▓  │
-└───────────────────────────────┘`
-	b.WriteString(centerText(logoStyle.Render(asciiTerminal), width))
-	b.WriteString("\n\n")
-
-	// Typing effect text
-	displayText := splashStyle.Render(m.splashText)
-	cursor := ""
-	if m.showCursor {
-		cursor = cursorStyle.Render("█")
-	} else {
-		cursor = " "
-	}
-	b.WriteString(centerText(displayText+cursor, width))
-
-	// Center vertically
-	content := b.String()
-	contentHeight := strings.Count(content, "\n")
-	topPadding := (height - contentHeight) / 3
-
-	return strings.Repeat("\n", topPadding) + content
-}
-
-func (m model) renderMatrix() string {
-	var b strings.Builder
-	for y := 0; y < m.height-2; y++ {
-		for x := 0; x < m.width; x++ {
-			if x < len(m.matrixRain) && y < len(m.matrixRain[x]) && m.matrixRain[x][y] != 0 {
-				intensity := 255 - (y * 10)
-				if intensity < 50 {
-					intensity = 50
-				}
-				color := lipgloss.Color(fmt.Sprintf("#00%02x00", intensity))
-				b.WriteString(lipgloss.NewStyle().Foreground(color).Render(string(m.matrixRain[x][y])))
-			} else {
-				b.WriteString(" ")
-			}
-		}
-		b.WriteString("\n")
-	}
-	hint := centerText(hintStyle.Render("You found the Matrix! Press ESC to return..."), m.width)
-	b.WriteString(hint)
-	return b.String()
-}
-
-func (m model) View() string {
-	// Splash screen
-	if m.view == ViewSplash {
-		return m.renderSplash()
-	}
-
-	// Matrix easter egg
-	if m.view == ViewMatrix {
-		return m.renderMatrix()
-	}
-
-	width := m.width
-	height := m.height
-	if width == 0 {
-		width = 80
-	}
-	if height == 0 {
-		height = 24
-	}
-
-	// Content width logic - adapt to smaller screens
-	var contentWidth int
-
-	if width < 50 {
-		// Tight layout for mobile/small terms
-		contentWidth = width - 4
-	} else {
-		// Spacious layout for desktop
-		contentWidth = width - 10
-		if contentWidth > 72 {
-			contentWidth = 72
-		}
-	}
-
-	if contentWidth < 30 {
-		contentWidth = 30 // Absolute minimum to prevents rendering breaks
-	}
-
-	var b strings.Builder
-
-	// === RESPONSIVE LOGO ===
-	var logo string
-	if contentWidth >= 60 {
-		// Large logo for bigger terminals
-		logo = `
- ███████╗ █████╗      ██╗     ██╗ █████╗ ██████╗ 
+func (m model) logoText() string {
+	switch m.tier() {
+	case 0:
+		return "SAJJAD AIYOOB"
+	case 1:
+		return ` ╔═╗┌─┐ ┬ ┬┌─┐┌┬┐
+ ╚═╗├─┤ │ │├─┤ ││
+ ╚═╝┴ ┴└┘└┘┴ ┴─┴┘
+   ╔═╗┬┬ ┬┌─┐┌─┐┌┐
+   ╠═╣│└┬┘│ ││ │├┴┐
+   ╩ ╩┴ ┴ └─┘└─┘└─┘`
+	default:
+		return ` ███████╗ █████╗      ██╗     ██╗ █████╗ ██████╗
  ██╔════╝██╔══██╗     ██║     ██║██╔══██╗██╔══██╗
  ███████╗███████║     ██║     ██║███████║██║  ██║
  ╚════██║██╔══██║██   ██║██   ██║██╔══██║██║  ██║
  ███████║██║  ██║╚█████╔╝╚█████╔╝██║  ██║██████╔╝
- ╚══════╝╚═╝  ╚═╝ ╚════╝  ╚════╝ ╚═╝  ╚═╝╚═════╝ 
-      █████╗ ██╗██╗   ██╗ ██████╗  ██████╗ ██████╗ 
+ ╚══════╝╚═╝  ╚═╝ ╚════╝  ╚════╝ ╚═╝  ╚═╝╚═════╝
+      █████╗ ██╗██╗   ██╗ ██████╗  ██████╗ ██████╗
      ██╔══██╗██║╚██╗ ██╔╝██╔═══██╗██╔═══██╗██╔══██╗
      ███████║██║ ╚████╔╝ ██║   ██║██║   ██║██████╔╝
      ██╔══██║██║  ╚██╔╝  ██║   ██║██║   ██║██╔══██╗
      ██║  ██║██║   ██║   ╚██████╔╝╚██████╔╝██████╔╝
-     ╚═╝  ╚═╝╚═╝   ╚═╝    ╚═════╝  ╚═════╝ ╚═════╝ 
-`
-	} else {
-		// Smaller logo for narrow terminals
-		logo = `
- ╔═╗┌─┐ ┬ ┬┌─┐┌┬┐
- ╚═╗├─┤ │ │├─┤ ││
- ╚═╝┴ ┴└┘└┘┴ ┴─┴┘
-   ╔═╗┬┬ ┬┌─┐┌─┐┌┐ 
-   ╠═╣│└┬┘│ ││ │├┴┐
-   ╩ ╩┴ ┴ └─┘└─┘└─┘
-`
+     ╚═╝  ╚═╝╚═╝   ╚═╝    ╚═════╝  ╚═════╝ ╚═════╝`
 	}
-	b.WriteString(centerText(logoStyle.Render(logo), contentWidth))
+}
 
-	// === TAGLINE (properly centered) ===
-	taglineText := "Backend Developer · Cloud Enthusiast · DevOps"
-	taglineStyle := lipgloss.NewStyle().Foreground(muted).Italic(true)
-	taglineRendered := taglineStyle.Render(taglineText)
-	b.WriteString("\n")
-	b.WriteString(centerText(taglineRendered, contentWidth))
+func (m model) hints() string {
+	if m.view == ViewDetail || m.view == ViewHelp {
+		return "esc  back  ·  q  quit"
+	}
+	return "↑↓  navigate  ·  ↵  open  ·  ?  help  ·  q  quit"
+}
+
+// --- RENDER SPLASH ---
+
+func (m model) renderSplash() string {
+	w, h := m.width, m.height
+	if w == 0 {
+		w = 80
+	}
+	if h == 0 {
+		h = 24
+	}
+
+	var b strings.Builder
+	b.WriteString(centerText(logoStyle.Render(m.logoText()), w))
 	b.WriteString("\n\n")
 
-	// === NAVIGATION ===
-	var navItems []string
-	if m.view == ViewList {
-		navItems = append(navItems, navActive.Render("◆ home"))
-	} else {
-		navItems = append(navItems, navInactive.Render("◇ home"))
+	cursor := " "
+	if m.showCursor {
+		cursor = cursorStyle.Render("█")
 	}
-	navItems = append(navItems, navInactive.Render("│"))
-	if m.view == ViewDetail {
-		navItems = append(navItems, navActive.Render("◆ details"))
-	} else {
-		navItems = append(navItems, navInactive.Render("◇ details"))
+	b.WriteString(centerText(splashStyle.Render(m.splashText)+cursor, w))
+
+	content := b.String()
+	topPad := (h - strings.Count(content, "\n") - 1) / 3
+	if topPad < 0 {
+		topPad = 0
 	}
-	nav := lipgloss.JoinHorizontal(lipgloss.Center, navItems...)
-	b.WriteString(centerText(nav, contentWidth))
-	b.WriteString("\n")
-
-	// === DIVIDER ===
-	dividerWidth := contentWidth - 10
-	if dividerWidth < 20 {
-		dividerWidth = 20
-	}
-	divider := lipgloss.NewStyle().Foreground(dimmed).Render(strings.Repeat("─", dividerWidth))
-	b.WriteString(centerText(divider, contentWidth))
-	b.WriteString("\n")
-
-	if m.view == ViewList {
-		// === PROJECT LIST ===
-		projectSection := sectionStyle.Render("▸ PROJECTS")
-		b.WriteString(centerText(projectSection, contentWidth))
-		b.WriteString("\n\n")
-
-		for i, item := range items {
-			if item.Category == "projects" {
-				icon := item.Icon
-				tag := tagStyle.Render(item.Tag)
-
-				if m.cursor == i {
-					line := fmt.Sprintf("› %s %s  %s", icon, item.Title, tag)
-					b.WriteString(centerText(itemSelected.Render(line), contentWidth))
-				} else {
-					line := fmt.Sprintf("  %s %s  %s", icon, item.Title, tag)
-					b.WriteString(centerText(itemNormal.Render(line), contentWidth))
-				}
-				b.WriteString("\n")
-			}
-		}
-
-		// === ABOUT SECTION ===
-		b.WriteString("\n")
-		aboutSection := sectionStyle.Render("▸ ABOUT")
-		b.WriteString(centerText(aboutSection, contentWidth))
-		b.WriteString("\n\n")
-
-		for i, item := range items {
-			if item.Category == "about" {
-				icon := item.Icon
-				tag := tagStyle.Render(item.Tag)
-
-				if m.cursor == i {
-					line := fmt.Sprintf("› %s %s  %s", icon, item.Title, tag)
-					b.WriteString(centerText(itemSelected.Render(line), contentWidth))
-				} else {
-					line := fmt.Sprintf("  %s %s  %s", icon, item.Title, tag)
-					b.WriteString(centerText(itemNormal.Render(line), contentWidth))
-				}
-				b.WriteString("\n")
-			}
-		}
-
-		// === SOCIAL LINKS (Clickable!) ===
-		b.WriteString("\n")
-		socialSection := sectionStyle.Render("▸ CONNECT")
-		b.WriteString(centerText(socialSection, contentWidth))
-		b.WriteString("\n\n")
-
-		for _, s := range socials {
-			// Show URL directly (OSC8 hyperlinks don't work in all SSH clients)
-			// Calculate padding manually to handle OSC8 sequences correctly
-			visibleText := socialIcon.Render(s.Icon) + socialText.Render(s.URL)
-			textWidth := lipgloss.Width(visibleText)
-			padding := (contentWidth - textWidth) / 2
-			if padding < 0 {
-				padding = 0
-			}
-
-			socialLine := socialIcon.Render(s.Icon) + hyperlink(s.Link, socialText.Render(s.URL))
-			b.WriteString(strings.Repeat(" ", padding) + socialLine)
-			b.WriteString("\n")
-		}
-
-		// === QUOTE (Easter egg) ===
-		if m.showQuote {
-			b.WriteString("\n")
-			quote := quoteStyle.Render(m.currentQuote)
-			b.WriteString(centerText(quote, contentWidth))
-			b.WriteString("\n")
-		}
-
-		// === CONFETTI (Easter egg) ===
-		if m.showConfetti {
-			confetti := []string{"🎉", "✨", "🎊", "⭐", "💫", "🌟"}
-			var confettiLine string
-			for i := 0; i < 10; i++ {
-				confettiLine += confetti[rand.Intn(len(confetti))] + " "
-			}
-			b.WriteString("\n")
-			b.WriteString(centerText(confettiLine, contentWidth))
-		}
-
-		// === HINTS ===
-		b.WriteString("\n")
-		hints := hintStyle.Render("↑↓ navigate · enter view · ? help · q quit")
-		b.WriteString(centerText(hints, contentWidth))
-
-	} else if m.view == ViewDetail {
-		// === DETAIL VIEW ===
-		item := items[m.cursor]
-
-		// Adjust detail box width based on content width
-		boxWidth := contentWidth - 4
-		if boxWidth < 40 {
-			boxWidth = 40
-		}
-		if boxWidth > 60 {
-			boxWidth = 60
-		}
-
-		dynamicDetailBox := detailBox.Copy().Width(boxWidth)
-		dynamicDescStyle := descStyle.Copy().Width(boxWidth - 6)
-
-		// Project link
-		var linkLine string
-		if item.Link != "" {
-			linkStyle := lipgloss.NewStyle().Foreground(cyan).Underline(true)
-			visibleLink := linkStyle.Render("→ " + item.Link)
-			linkLine = hyperlink(item.Link, visibleLink)
-		}
-
-		detailContent := lipgloss.JoinVertical(lipgloss.Left,
-			titleStyle.Render(item.Icon+"  "+item.Title),
-			"",
-			techStyle.Render(item.TechStack),
-			"",
-			dynamicDescStyle.Render(item.Description),
-			"",
-			tagStyle.Render(" "+item.Tag+" "),
-		)
-
-		if linkLine != "" {
-			detailContent = lipgloss.JoinVertical(lipgloss.Left, detailContent, "", linkLine)
-		}
-
-		box := dynamicDetailBox.Render(detailContent)
-		b.WriteString("\n")
-		b.WriteString(centerText(box, contentWidth))
-		b.WriteString("\n\n")
-
-		hints := hintStyle.Render("esc back · q quit")
-		b.WriteString(centerText(hints, contentWidth))
-	} else if m.view == ViewHelp {
-		// === HELP / SECRETS ===
-		helpSection := sectionStyle.Render("▸ COMMANDS & SECRETS")
-		b.WriteString(centerText(helpSection, contentWidth))
-		b.WriteString("\n\n")
-
-		secrets := []struct{ key, desc string }{
-			{"↑ / k", "Navigate up"},
-			{"↓ / j", "Navigate down"},
-			{"enter / spc", "Open details"},
-			{"esc / bksp", "Go back"},
-			{"q", "Quit"},
-			{"?", "Toggle help"},
-			{"s", "A little surprise"},
-			{"type 'hello'", "Say hello"},
-			{"type 'hire'", "Hiring info"},
-		}
-
-		for _, s := range secrets {
-			keyStr := tagStyle.Render(s.key)
-			descStr := itemNormal.Render(s.desc)
-			fullLine := keyStr + "   " + descStr
-			b.WriteString(centerText(fullLine, contentWidth))
-			b.WriteString("\n\n")
-		}
-
-		hints := hintStyle.Render("esc back · q quit")
-		b.WriteString(centerText(hints, contentWidth))
-	}
-
-	// === FOOTER ===
-	b.WriteString("\n")
-	// OLD STATIC FOOTER:
-	// footerText := lipgloss.NewStyle().Foreground(dimmed).Render("━━━ © 2026 ━━━")
-
-	// NEW DYNAMIC FOOTER (Uses your hints!):
-	// Pick a hint based on the seconds of the current time so it rotates
-	hintIndex := int(time.Now().Unix() % int64(len(easterEggHints)))
-	hint := easterEggHints[hintIndex]
-	footerText := lipgloss.NewStyle().Foreground(dimmed).Render(fmt.Sprintf("━━━ © 2026 ━━━ %s ━━━", hint))
-	b.WriteString(centerText(footerText, contentWidth))
-
-	// === MAIN BORDER BOX ===
-	mainBox := lipgloss.NewStyle().
-		Border(lipgloss.DoubleBorder()).
-		BorderForeground(accent).
-		Padding(1, 1). // Reduced padding
-		Width(contentWidth).
-		Render(b.String())
-
-	// Center the box in the terminal
-	boxHeight := lipgloss.Height(mainBox)
-	verticalPadding := 0
-	if height > boxHeight {
-		verticalPadding = (height - boxHeight) / 2
-	}
-
-	horizontalPadding := 0
-	boxWidth := lipgloss.Width(mainBox)
-	if width > boxWidth {
-		horizontalPadding = (width - boxWidth) / 2
-	}
-
-	return lipgloss.NewStyle().
-		MarginTop(verticalPadding).
-		MarginLeft(horizontalPadding).
-		Render(mainBox)
+	return strings.Repeat("\n", topPad) + content
 }
+
+// --- RENDER LIST ---
+
+func (m model) renderItemRow(i int, item Item) string {
+	selected := m.cursor == i
+
+	var titleSty lipgloss.Style
+	var cursor string
+	if selected {
+		titleSty = itemTitleSelected
+		cursor = "›"
+	} else {
+		titleSty = itemTitleNormal
+		cursor = " "
+	}
+
+	title := titleSty.Render(fmt.Sprintf("%s %s %s", cursor, item.Icon, item.Title))
+	tag := tagStyle.Render(item.Tag)
+	row := title + "  " + tag
+
+	if selected && m.tier() >= 1 && item.TechStack != "" {
+		tech := "     " + itemTechSelected.Render(item.TechStack)
+		row += "\n" + tech
+	}
+	return row
+}
+
+func (m model) renderList(cw int) string {
+	var b strings.Builder
+
+	b.WriteString(sectionHeader("PROJECTS", cw) + "\n\n")
+	for i, item := range items {
+		if item.Category == "projects" {
+			b.WriteString(m.renderItemRow(i, item) + "\n\n")
+		}
+	}
+
+	b.WriteString(sectionHeader("ABOUT", cw) + "\n\n")
+	for i, item := range items {
+		if item.Category == "about" {
+			b.WriteString(m.renderItemRow(i, item) + "\n\n")
+		}
+	}
+
+	b.WriteString(sectionHeader("CONNECT", cw) + "\n\n")
+	for _, s := range socials {
+		// Compute padding manually — OSC8 sequences confound lipgloss.Width
+		visibleW := lipgloss.Width(socialIconStyle.Render(s.Icon)) +
+			2 + lipgloss.Width(socialTextStyle.Render(s.URL))
+		lpad := (cw - visibleW) / 2
+		if lpad < 0 {
+			lpad = 0
+		}
+		icon := socialIconStyle.Render(s.Icon)
+		text := hyperlink(s.Link, socialTextStyle.Render(s.URL))
+		b.WriteString(strings.Repeat(" ", lpad) + icon + "  " + text + "\n")
+	}
+
+	return b.String()
+}
+
+// --- RENDER DETAIL ---
+
+func (m model) renderDetail(cw int) string {
+	item := items[m.cursor]
+
+	var b strings.Builder
+
+	b.WriteString(detailTitleStyle.Render(item.Icon+"  "+item.Title) + "\n")
+
+	var meta []string
+	if item.Year != "" {
+		meta = append(meta, item.Year)
+	}
+	if item.Role != "" {
+		meta = append(meta, item.Role)
+	}
+	if item.Tag != "" {
+		meta = append(meta, item.Tag)
+	}
+	if len(meta) > 0 {
+		b.WriteString("   " + detailMetaStyle.Render(strings.Join(meta, " · ")) + "\n")
+	}
+
+	b.WriteString("\n" + ruleStyle.Render(strings.Repeat("─", cw)) + "\n\n")
+
+	if item.TechStack != "" {
+		b.WriteString(detailTechStyle.Render(item.TechStack) + "\n")
+	}
+
+	if item.Repo != "" {
+		if rd, ok := cache.get(item.Repo); ok {
+			var parts []string
+			if rd.Stars > 0 {
+				parts = append(parts, fmt.Sprintf("★ %d", rd.Stars))
+			}
+			if rd.Language != "" {
+				parts = append(parts, rd.Language)
+			}
+			if !rd.PushedAt.IsZero() {
+				parts = append(parts, "updated "+relativeTime(rd.PushedAt))
+			}
+			if len(parts) > 0 {
+				b.WriteString(detailMetaStyle.Render(strings.Join(parts, " · ")) + "\n")
+			}
+		}
+	}
+
+	b.WriteString("\n")
+
+	descW := cw - 2
+	if descW < 20 {
+		descW = 20
+	}
+	desc := lipgloss.NewStyle().Foreground(colFG).Width(descW).Render(item.Description)
+	b.WriteString(desc + "\n")
+
+	if item.Link != "" {
+		b.WriteString("\n")
+		lnk := linkStyle.Render("→  " + item.Link)
+		b.WriteString(hyperlink(item.Link, lnk) + "\n")
+	}
+
+	return b.String()
+}
+
+// --- RENDER HELP ---
+
+func (m model) renderHelp(cw int) string {
+	var b strings.Builder
+	b.WriteString(sectionHeader("KEYBINDINGS", cw) + "\n\n")
+
+	keys := []struct{ key, desc string }{
+		{"↑ / k", "navigate up"},
+		{"↓ / j", "navigate down"},
+		{"↵ / space", "open detail"},
+		{"esc / bksp", "go back"},
+		{"tab", "cycle items"},
+		{"?", "toggle this view"},
+		{"q", "quit"},
+	}
+	for _, k := range keys {
+		b.WriteString("  " + tagStyle.Render(k.key) + "   " + hintStyle.Render(k.desc) + "\n\n")
+	}
+
+	return b.String()
+}
+
+// --- VIEW ---
+
+func (m model) View() string {
+	if m.view == ViewSplash {
+		return m.renderSplash()
+	}
+
+	cw := m.contentWidth()
+
+	var b strings.Builder
+
+	// Header
+	b.WriteString(centerText(logoStyle.Render(m.logoText()), cw) + "\n")
+	b.WriteString(centerText(taglineStyle.Render("Backend Developer  ·  Cloud  ·  Sri Lanka"), cw) + "\n\n")
+	b.WriteString(ruleStyle.Render(strings.Repeat("─", cw)) + "\n\n")
+
+	// Content
+	switch m.view {
+	case ViewList:
+		b.WriteString(m.renderList(cw))
+	case ViewDetail:
+		b.WriteString(m.renderDetail(cw))
+	case ViewHelp:
+		b.WriteString(m.renderHelp(cw))
+	}
+
+	// Footer
+	b.WriteString("\n" + ruleStyle.Render(strings.Repeat("─", cw)) + "\n")
+	b.WriteString(centerText(hintStyle.Render(m.hints()), cw))
+
+	content := b.String()
+
+	w, h := m.width, m.height
+	if w == 0 {
+		w = 80
+	}
+	if h == 0 {
+		h = 24
+	}
+
+	contentH := strings.Count(content, "\n") + 1
+	topPad := 0
+	if h > contentH+2 {
+		topPad = (h - contentH) / 2
+	}
+	leftPad := 0
+	if w > cw {
+		leftPad = (w - cw) / 2
+	}
+
+	// Manual margin to avoid lipgloss width-detection issues with raw ANSI strings
+	padStr := strings.Repeat(" ", leftPad)
+	lines := strings.Split(content, "\n")
+	for i, line := range lines {
+		lines[i] = padStr + line
+	}
+	return strings.Repeat("\n", topPad) + strings.Join(lines, "\n")
+}
+
 func init() {
-	// Force "True Color" (24-bit) output, bypassing environment checks
 	lipgloss.SetColorProfile(termenv.TrueColor)
 }
 
-// ... func main() starts here
-
-// --- 6. SERVER ---
+// --- SERVER ---
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
+	startGitHubRefresh()
+
 	s, err := wish.NewServer(
 		wish.WithAddress("0.0.0.0:23234"),
 		wish.WithHostKeyPath(".ssh/term_info_ed25519"),
